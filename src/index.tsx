@@ -28,11 +28,9 @@ export default function Command() {
 
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search components...">
-      <List.Section title="Results">
-        {componentsToShow.map(([id, component]) => (
-          <SearchListItem key={id} component={component} />
-        ))}
-      </List.Section>
+      {componentsToShow.map(([id, component]) => (
+        <SearchListItem key={id} component={component} />
+      ))}
     </List>
   );
 }
@@ -45,7 +43,10 @@ function SearchListItem({ component }: { component: Component }) {
       actions={
         <ActionPanel title={component.title}>
           <ActionPanel.Section>
-            <Action.OpenInBrowser url={`http://localhost:6006/?path=/story/${component.id}`} title="Storybookで開く" />
+            <Action.OpenInBrowser
+              url={new URL(`?path=/story/${component.id}`, BASE_URL).href}
+              title="Open in Storybook"
+            />
           </ActionPanel.Section>
         </ActionPanel>
       }
