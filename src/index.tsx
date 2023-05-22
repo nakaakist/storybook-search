@@ -1,91 +1,54 @@
 import { ActionPanel, Action, List } from "@raycast/api";
-import { useFetch, Response } from "@raycast/utils";
-import { useState } from "react";
-import { URLSearchParams } from "node:url";
+import { useFetch } from "@raycast/utils";
+import { useMemo } from "react";
+
+const BASE_URL = "http://localhost:6006/";
+
+type Component = {
+  id: string;
+  title: string;
+  name: string;
+  importPath: string;
+  tags: string[];
+  type: string;
+};
+
+type IndexData = {
+  entries: { [id: string]: Component };
+};
 
 export default function Command() {
-  const [searchText, setSearchText] = useState("");
-  const { data, isLoading } = useFetch(
-    "https://api.npms.io/v2/search?" +
-      // send the search query to the API
-      new URLSearchParams({ q: searchText.length === 0 ? "@raycast/api" : searchText }),
-    {
-      parseResponse: parseFetchResponse,
-    }
-  );
+  const { data, isLoading } = useFetch(new URL("index.json", BASE_URL).href);
+
+  const componentsToShow = useMemo(() => {
+    if (!data) return [];
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return Object.entries((data as IndexData).entries).filter(([_, c]) => c.name === "Docs");
+  }, [data]);
 
   return (
-    <List
-      isLoading={isLoading}
-      onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search npm packages..."
-      throttle
-    >
-      <List.Section title="Results" subtitle={data?.length + ""}>
-        {data?.map((searchResult) => (
-          <SearchListItem key={searchResult.name} searchResult={searchResult} />
+    <List isLoading={isLoading} searchBarPlaceholder="Search components...">
+      <List.Section title="Results">
+        {componentsToShow.map(([id, component]) => (
+          <SearchListItem key={id} component={component} />
         ))}
       </List.Section>
     </List>
   );
 }
 
-function SearchListItem({ searchResult }: { searchResult: SearchResult }) {
+function SearchListItem({ component }: { component: Component }) {
   return (
     <List.Item
-      title={searchResult.name}
-      subtitle={searchResult.description}
-      accessoryTitle={searchResult.username}
+      title={component.title}
+      keywords={[component.title, component.id]}
       actions={
-        <ActionPanel>
+        <ActionPanel title={component.title}>
           <ActionPanel.Section>
-            <Action.OpenInBrowser title="Open in Browser" url={searchResult.url} />
-          </ActionPanel.Section>
-          <ActionPanel.Section>
-            <Action.CopyToClipboard
-              title="Copy Install Command"
-              content={`npm install ${searchResult.name}`}
-              shortcut={{ modifiers: ["cmd"], key: "." }}
-            />
+            <Action.OpenInBrowser url={`http://localhost:6006/?path=/story/${component.id}`} title="Storybookで開く" />
           </ActionPanel.Section>
         </ActionPanel>
       }
     />
   );
-}
-
-/** Parse the response from the fetch query into something we can display */
-async function parseFetchResponse(response: Response) {
-  const json = (await response.json()) as
-    | {
-        results: {
-          package: {
-            name: string;
-            description?: string;
-            publisher?: { username: string };
-            links: { npm: string };
-          };
-        }[];
-      }
-    | { code: string; message: string };
-
-  if (!response.ok || "message" in json) {
-    throw new Error("message" in json ? json.message : response.statusText);
-  }
-
-  return json.results.map((result) => {
-    return {
-      name: result.package.name,
-      description: result.package.description,
-      username: result.package.publisher?.username,
-      url: result.package.links.npm,
-    } as SearchResult;
-  });
-}
-
-interface SearchResult {
-  name: string;
-  description?: string;
-  username?: string;
-  url: string;
 }
