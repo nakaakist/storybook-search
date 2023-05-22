@@ -1,4 +1,4 @@
-import { ActionPanel, Action, List } from "@raycast/api";
+import { ActionPanel, Action, List, Detail } from "@raycast/api";
 import { useFetch } from "@raycast/utils";
 import { useMemo } from "react";
 
@@ -10,32 +10,59 @@ type Component = {
   name: string;
   importPath: string;
   tags: string[];
-  type: string;
 };
 
 type IndexData = {
   entries: { [id: string]: Component };
 };
 
-export default function Command() {
-  const { data, isLoading } = useFetch(new URL("index.json", BASE_URL).href);
+type StoriesData = {
+  stories: { [id: string]: Component };
+};
 
-  const componentsToShow = useMemo(() => {
-    if (!data) return [];
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    return Object.entries((data as IndexData).entries).filter(([_, c]) => c.name === "Docs");
-  }, [data]);
+const Command = () => {
+  // Load Storybook's index file https://storybook.js.org/docs/react/configure/sidebar-and-urls#story-indexers
+  const {
+    data: index,
+    isLoading: isLoadingIndex,
+    error: indexError,
+  } = useFetch<IndexData>(new URL("index.json", BASE_URL).href);
+  const {
+    data: stories,
+    isLoading: isLoadingStories,
+    error: storiesError,
+  } = useFetch<StoriesData>(new URL("stories.json", BASE_URL).href);
+
+  const componentsToShow = useMemo(() => toComponentsToShow(index, stories), [index, stories]);
+
+  if (storiesError && indexError)
+    return (
+      <Detail
+        markdown={`Error loading data from Storybook server.\n\nMake sure stories.json or index.json is served from ${BASE_URL}.`}
+      />
+    );
 
   return (
-    <List isLoading={isLoading} searchBarPlaceholder="Search components...">
-      {componentsToShow.map(([id, component]) => (
-        <SearchListItem key={id} component={component} />
+    <List isLoading={isLoadingStories || isLoadingIndex} searchBarPlaceholder="Search components...">
+      {componentsToShow.map((component) => (
+        <SearchListItem key={component.id} component={component} />
       ))}
     </List>
   );
-}
+};
 
-function SearchListItem({ component }: { component: Component }) {
+const toComponentsToShow = (indexData?: IndexData, storiesData?: StoriesData): Component[] => {
+  const filter = (components: [string, Component][]) =>
+    components.filter(([_, c]) => c.name === "Docs").map(([_, c]) => c);
+
+  // index.json is the preferred source of truth
+  if (indexData) return filter(Object.entries(indexData.entries));
+  if (storiesData) return filter(Object.entries(storiesData.stories));
+
+  return [];
+};
+
+const SearchListItem = ({ component }: { component: Component }) => {
   return (
     <List.Item
       title={component.title}
@@ -52,4 +79,6 @@ function SearchListItem({ component }: { component: Component }) {
       }
     />
   );
-}
+};
+
+export default Command;
