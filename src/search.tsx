@@ -52,17 +52,19 @@ const toComponentsToShow = (indexData?: IndexData, storiesData?: StoriesData): C
 };
 
 const SearchListItem = ({ component, baseUrl }: { component: Component; baseUrl: string }) => {
+  const title = `${component.title} - ${component.name}`;
   return (
     <List.Item
-      title={component.title}
+      title={title}
       keywords={[component.title, component.id]}
       actions={
-        <ActionPanel title={component.title}>
+        <ActionPanel title={title}>
           <ActionPanel.Section>
             <Action.OpenInBrowser
               url={new URL(`?path=/story/${component.id}`, baseUrl).href}
               title="Open in Storybook"
             />
+            <Action.CopyToClipboard content={component.importPath} title="Copy Import Path" />
           </ActionPanel.Section>
           <ActionPanel.Section>
             <EditConfigAction />
