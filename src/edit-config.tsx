@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, LocalStorage, popToRoot, useNavigation } from "@raycast/api";
+import { Action, ActionPanel, Form, LocalStorage, useNavigation } from "@raycast/api";
 import { useState } from "react";
 import { Config } from "./types";
 import { BASE_URL_STORAGE_KEY } from "./constants";
